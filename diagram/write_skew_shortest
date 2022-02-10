@@ -1,0 +1,10 @@
+title Update
+
+participant "historical"
+participant Alice
+participant "latest"
+participant Bobby
+
+Alice<-"latest": A1. retrieve "0"
+Alice->"latest": A2. update to "1"
+Alice->"historical": A3. save "0"
