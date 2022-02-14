@@ -1,19 +1,20 @@
-package dev.jjrz.mongotx
+package dev.jjrz.mongo.optimistic
 
+import dev.jjrz.mongo.HistoricalItemsRepository
+import dev.jjrz.mongo.Item
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataAccessException
 import org.springframework.retry.annotation.Retryable
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
-class ItemUpdaterTx(
-    private val latestUpdater: LatestUpdater,
-    private val latest: LatestItemsRepositoryTx,
-    private val historical: HistoricalItemsRepositoryTx,
+class OptimisticUpdater(
+    private val latestUpdater: RetryableUpdater,
+    private val latest: OptimisticRepository,
+    private val historical: HistoricalItemsRepository,
 ) {
 
-    fun addItem(id: Int, value: String) = LatestItemTx(id, ItemTx(id, value))
+    fun addItem(id: Int, value: String) = OptimisticItem(id, Item(id, value))
         .let { latest.save(it) }
 
     fun updateItem(id: Int, text: String) = latestUpdater.update(id, text)
@@ -21,7 +22,8 @@ class ItemUpdaterTx(
 }
 
 @Service
-class LatestUpdater(private val latest: LatestItemsRepositoryTx) {
+class RetryableUpdater(private val latest: OptimisticRepository) {
+
     private val log = LoggerFactory.getLogger(this.javaClass)
 
     @Retryable(value = [DataAccessException::class], maxAttempts = 10)
@@ -29,7 +31,8 @@ class LatestUpdater(private val latest: LatestItemsRepositoryTx) {
         ?.next(value)
         ?.let { (newLatest, newHistorical) -> update(newLatest, newHistorical) }
 
-    private fun update(newLatest: LatestItemTx, newHistorical: ItemTx): ItemTx {
+    @Suppress("DuplicatedCode")
+    private fun update(newLatest: OptimisticItem, newHistorical: Item): Item {
         log.info("(??) from \"${newHistorical.value}\" to \"${newLatest.item.value}\"")
         latest.save(newLatest)
         log.info("(ok) from \"${newHistorical.value}\" to \"${newLatest.item.value}\"")

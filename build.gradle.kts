@@ -26,6 +26,7 @@ dependencies {
 	testImplementation("org.codehaus.groovy:groovy-all:2.4.15")
 	testImplementation("org.spockframework:spock-core:1.2-groovy-2.4")
 	testImplementation("org.spockframework:spock-spring:1.2-groovy-2.4")
+	testImplementation("de.flapdoodle.embed:de.flapdoodle.embed.mongo")
 }
 
 tasks.withType<KotlinCompile> {
@@ -34,7 +35,3 @@ tasks.withType<KotlinCompile> {
 		jvmTarget = "11"
 	}
 }
-
-//tasks.withType<Test> {
-//	useJUnitPlatform()
-//}

@@ -1,5 +1,6 @@
-package dev.jjrz.mongotx.before
+package dev.jjrz.mongo.optimistic
 
+import dev.jjrz.mongo.HistoricalItemsRepository
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import spock.lang.Specification
@@ -7,19 +8,19 @@ import spock.lang.Specification
 import java.util.concurrent.CompletableFuture
 
 @SpringBootTest
-class MongoTxTest extends Specification {
+class OptimisticMongoTest extends Specification {
 
-    @Autowired LatestItemsRepository latest
+    @Autowired OptimisticRepository latest
     @Autowired HistoricalItemsRepository historical
 
-    @Autowired ItemUpdater updater
+    @Autowired OptimisticUpdater updater
 
     def setup() {
         latest.deleteAll()
         historical.deleteAll()
     }
 
-    def "history not retained"() {
+    def "history retained"() {
         when:
         updater.addItem(1, '0')
 
@@ -29,7 +30,7 @@ class MongoTxTest extends Specification {
                 .collect { future -> future.get() }
 
         and:
-        updater.updateItem(1, 'another one')
+        updater.updateItem(1, 'final')
 
         then:
         with(historical.findAll().collect { it.value }) {

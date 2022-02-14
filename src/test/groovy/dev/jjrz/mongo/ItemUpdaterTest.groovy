@@ -1,5 +1,8 @@
-package dev.jjrz.mongotx
+package dev.jjrz.mongo
 
+import dev.jjrz.mongo.HistoricalItemsRepository
+import dev.jjrz.mongo.ItemUpdater
+import dev.jjrz.mongo.LatestItemsRepository
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import spock.lang.Specification
@@ -7,12 +10,12 @@ import spock.lang.Specification
 import java.util.concurrent.CompletableFuture
 
 @SpringBootTest
-class MongoTxTest extends Specification {
+class ItemUpdaterTest extends Specification {
 
-    @Autowired LatestItemsRepositoryTx latest
-    @Autowired HistoricalItemsRepositoryTx historical
+    @Autowired LatestItemsRepository latest
+    @Autowired HistoricalItemsRepository historical
 
-    @Autowired ItemUpdaterTx updater
+    @Autowired ItemUpdater updater
 
     def setup() {
         latest.deleteAll()
@@ -29,7 +32,7 @@ class MongoTxTest extends Specification {
                 .collect { future -> future.get() }
 
         and:
-        updater.updateItem(1, 'another one')
+        updater.updateItem(1, 'final')
 
         then:
         with(historical.findAll().collect { it.value }) {

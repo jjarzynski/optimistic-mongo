@@ -1,0 +1,7 @@
+logging.pattern.console: '%d{HH:mm:ss.SSS} : %m%n'
+
+spring.data.mongodb:
+  database: test
+  port: 27017
+
+spring.mongodb.embedded.version: 4.0.2

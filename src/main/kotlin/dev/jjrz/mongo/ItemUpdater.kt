@@ -1,4 +1,4 @@
-package dev.jjrz.mongotx.before
+package dev.jjrz.mongo
 
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -18,10 +18,12 @@ class ItemUpdater(
         ?.let { (newLatest, newHistorical) -> update(newLatest, newHistorical) }
         ?.let { historical.save(it) }
 
+    @Suppress("DuplicatedCode")
     private fun update(newLatest: LatestItem, newHistorical: Item): Item {
 
+        log.info("(??) from \"${newHistorical.value}\" to \"${newLatest.item.value}\"")
         latest.save(newLatest)
-        log.info("updated from \"${newHistorical.value}\" to \"${newLatest.item.value}\"")
+        log.info("(ok) from \"${newHistorical.value}\" to \"${newLatest.item.value}\"")
 
         return newHistorical
     }
