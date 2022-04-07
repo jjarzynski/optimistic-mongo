@@ -26,9 +26,9 @@ sequenceDiagram
 
 ## Problem
 
-Issues can arise if two clients start performing updates at the same.
+Issues can arise if two clients start performing updates at the same time.
 
-In the scenario below, Bobby retrieves value "0" right after Alice. He does that right before Alice manages to complete her update. Unaware of the new value written by Alice, Bobby goes on to do like he planned. He updates the document in collection `latest`, and then saves "0" to collection `historical`, because as far as Bobby knows "0" is the previous value.
+In the scenario below, Bobby retrieves value "0" right after Alice. He does that before Alice manages to complete her update. Unaware of the new value sent by Alice, Bobby updates the document in collection `latest`, and then saves "0" to collection `historical`. As far as Bobby knows, "0" is still the previous value.
 
 We call this type of errors _skewed writes_. Bobby does everything by the book. His only problem is his outdated (hence _skewed_) information.
 
