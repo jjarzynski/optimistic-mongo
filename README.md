@@ -26,7 +26,7 @@ sequenceDiagram
 
 ## Problem
 
-Issues can arise if two clients start performing updates at the same time.
+Issues arise if two clients start performing updates at the same time.
 
 In the scenario below, Bobby retrieves value "0" right after Alice. He does that before Alice manages to complete her update. Unaware of the new value sent by Alice, Bobby updates the document in collection `latest`, and then saves "0" to collection `historical`. As far as Bobby knows, "0" is still the previous value.
 
@@ -53,6 +53,66 @@ sequenceDiagram
     note over H: should be: "0", "1"
 ```
 
+(...)
+
+```kotlin
+@Document("latest")
+data class LatestItem(
+    @Id val id: Int,
+    val item: Item,
+) {
+    fun next(value: String) = Pair(
+        copy(item = Item(id, value)),
+        item
+    )
+}
+
+@Document("historical")
+data class Item(
+    val itemId: Int,
+    val value: String,
+)
+```
+
+(...)
+
+`ItemUpdaterTest`  
+`ItemUpdater#updateItem`
+
+```groovy
+def "history retained"() {
+    when:
+    updater.addItem(1, '0')
+
+    and:
+    def integers = (1..5).toList().collect { it as String }
+    integers.collect { number -> CompletableFuture.supplyAsync { updater.updateItem(1, number) } }
+            .collect { future -> future.get() }
+
+    and:
+    updater.updateItem(1, 'final')
+
+    then:
+    with(historical.findAll().collect { it.value }) {
+        it.containsAll(integers)
+    }
+}
+```
+
+(...)
+
+```
+19:14:53.007 : (??) from "0" to "5"
+19:14:53.008 : (??) from "0" to "3"
+19:14:53.007 : (??) from "0" to "4"
+19:14:53.007 : (??) from "0" to "1"
+19:14:53.008 : (??) from "0" to "2"
+19:14:53.024 : (ok) from "0" to "2"
+19:14:53.024 : (ok) from "0" to "3"
+19:14:53.026 : (ok) from "0" to "4"
+19:14:53.026 : (ok) from "0" to "5"
+19:14:53.031 : (ok) from "0" to "1"
+```
 
 ## Solution
 
@@ -68,11 +128,46 @@ data class OptimisticItem(
 )
 ```
 
-Pull out the fetch and update code to a method, so it ca be retried:
+Pull out the fetch and update code to a method, so it can be retried:
 
 ```kotlin
 @Retryable(value = [DataAccessException::class], maxAttempts = 10)
 fun update(id: Int, value: String) = latest.findById(id)
     ?.next(value)
     ?.let { (newLatest, newHistorical) -> update(newLatest, newHistorical) }
+```
+
+`OptimisticUpdater`  
+`RetryableUpdater`
+
+(...)
+
+```
+19:27:24.274 : (??) from "0" to "2"
+19:27:24.275 : (??) from "0" to "3"
+19:27:24.274 : (??) from "0" to "5"
+19:27:24.275 : (??) from "0" to "4"
+19:27:24.275 : (??) from "0" to "1"
+19:27:24.327 : (ok) from "0" to "4"
+
+19:27:25.341 : (??) from "4" to "3"
+19:27:25.341 : (??) from "4" to "5"
+19:27:25.341 : (??) from "4" to "1"
+19:27:25.343 : (??) from "4" to "2"
+19:27:25.354 : (ok) from "4" to "1"
+
+19:27:26.361 : (??) from "1" to "2"
+19:27:26.361 : (??) from "1" to "3"
+19:27:26.365 : (??) from "1" to "5"
+19:27:26.365 : (ok) from "1" to "3"
+
+19:27:27.381 : (??) from "3" to "5"
+19:27:27.381 : (??) from "3" to "2"
+19:27:27.386 : (ok) from "3" to "5"
+
+19:27:28.397 : (??) from "5" to "2"
+19:27:28.400 : (ok) from "5" to "2"
+
+19:27:28.404 : (??) from "2" to "final"
+19:27:28.406 : (ok) from "2" to "final"
 ```
